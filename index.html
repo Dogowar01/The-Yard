@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f0f0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="The Yard">
+  <title>The Yard</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css?v=8">
+</head>
+<body>
+  <div id="app">
+    <div id="install-banner" class="install-banner hidden">
+      <span>Install The Yard to your home screen</span>
+      <button id="install-btn" class="btn-install">INSTALL</button>
+      <button id="install-dismiss" class="btn-dismiss">✕</button>
+    </div>
+
+    <main id="screen-container">
+      <!-- Screens injected by JS -->
+    </main>
+
+    <nav id="bottom-nav">
+      <button class="nav-tab active" data-tab="today">
+        <span class="nav-icon">◈</span>
+        <span class="nav-label">TODAY</span>
+      </button>
+      <button class="nav-tab" data-tab="jobs">
+        <span class="nav-icon">◧</span>
+        <span class="nav-label">JOBS</span>
+      </button>
+      <button class="nav-tab" data-tab="projects">
+        <span class="nav-icon">◫</span>
+        <span class="nav-label">PROJECTS</span>
+      </button>
+      <button class="nav-tab" data-tab="money">
+        <span class="nav-icon">◉</span>
+        <span class="nav-label">MONEY</span>
+      </button>
+      <button class="nav-tab" data-tab="maintenance">
+        <span class="nav-icon">◎</span>
+        <span class="nav-label">MAINT</span>
+        <span class="nav-badge hidden" id="maint-badge"></span>
+      </button>
+      <button class="nav-tab" data-tab="fitness">
+        <span class="nav-icon">◐</span>
+        <span class="nav-label">FITNESS</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Modal overlay -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div id="modal-container" class="modal-container">
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <button id="settings-btn" aria-label="Settings">⚙</button>
+
+  <!-- Watermark -->
+  <div id="watermark" aria-hidden="true"></div>
+
+  <!-- Quick Add FAB -->
+  <button id="fab" class="fab">+</button>
+
+  <script src="js/storage.js?v=8"></script>
+  <script src="js/utils.js?v=8"></script>
+  <script src="js/modal.js?v=8"></script>
+  <script src="js/weather.js?v=8"></script>
+  <script src="js/today.js?v=8"></script>
+  <script src="js/jobs.js?v=8"></script>
+  <script src="js/projects.js?v=8"></script>
+  <script src="js/money.js?v=8"></script>
+  <script src="js/maintenance.js?v=8"></script>
+  <script src="js/fitness.js?v=8"></script>
+  <script src="js/settings.js?v=8"></script>
+  <script src="js/app.js?v=8"></script>
+</body>
+</html>

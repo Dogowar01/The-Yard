@@ -1,0 +1,25 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Local env
+.env
+.env.local
+
+# Build output (none yet, but for future)
+dist/
+build/
+
+# Logs
+*.log
