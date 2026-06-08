@@ -289,6 +289,11 @@ const Vault = {
             <div class="stat-value" style="font-size:11px;letter-spacing:0;">AES-256</div>
           </div>
         </div>
+        <div style="padding:0 16px 12px;">
+          <button class="btn btn-secondary" style="width:100%;font-size:12px;" id="vault-change-pin-btn">
+            ◩ CHANGE VAULT PIN
+          </button>
+        </div>
         <div id="vault-entries-list">
           <div class="empty-state"><div class="empty-state-text">Loading...</div></div>
         </div>
@@ -301,6 +306,8 @@ const Vault = {
     const count = document.getElementById('vault-count');
     if (!list) return;
     if (count) count.textContent = entries.length;
+
+    document.getElementById('vault-change-pin-btn')?.addEventListener('click', () => this.openChangePinModal());
 
     if (entries.length === 0) {
       list.innerHTML = `
@@ -493,6 +500,95 @@ const Vault = {
       return;
     }
     this.bindVault();
+  },
+
+  // ─── Change PIN ──────────────────────────
+  openChangePinModal() {
+    if (!this.isUnlocked()) return;
+
+    Modal.open('CHANGE VAULT PIN', `
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.6;">
+        Enter a new 4–6 digit PIN. All existing vault entries will be re-encrypted with the new PIN.
+      </p>
+
+      <div class="vault-lock-wrap" style="padding:0;">
+        <div class="pin-display" id="cp-display">——————</div>
+        <div class="pin-error hidden" id="cp-error"></div>
+        <div class="pin-pad" id="cp-pad" style="margin-top:12px;">${this._pinPadHTML()}</div>
+        <div class="vault-lock-sub" id="cp-label" style="margin-top:10px;">Enter new PIN (4–6 digits), then press ✓</div>
+      </div>
+    `);
+
+    let pinA = '';
+    let pinB = '';
+    let step = 'first';
+    let busy = false;
+
+    const display = document.getElementById('cp-display');
+    const label   = document.getElementById('cp-label');
+    const error   = document.getElementById('cp-error');
+
+    const updateDisplay = (val) => {
+      const dots = val.split('').map(() => '●').join('');
+      if (display) display.textContent = dots.padEnd(6, '—');
+    };
+
+    const showError = (msg) => {
+      if (!error) return;
+      error.textContent = msg;
+      error.classList.remove('hidden');
+      setTimeout(() => error.classList.add('hidden'), 2000);
+    };
+
+    const submit = async () => {
+      if (busy) return;
+      const pin = step === 'first' ? pinA : pinB;
+      if (pin.length < 4) { showError('Enter at least 4 digits'); return; }
+
+      if (step === 'first') {
+        busy = true;
+        await new Promise(r => setTimeout(r, 160));
+        busy = false;
+        step = 'confirm';
+        pinB = '';
+        updateDisplay('');
+        if (label) label.textContent = 'Confirm new PIN, then press ✓';
+      } else {
+        if (pinA !== pinB) {
+          showError('PINs did not match — try again');
+          setTimeout(() => { step = 'first'; pinA = ''; pinB = ''; updateDisplay(''); if (label) label.textContent = 'Enter new PIN (4–6 digits), then press ✓'; }, 1800);
+          return;
+        }
+        // Re-encrypt all entries with new PIN
+        busy = true;
+        const entries = await this.getEntries(); // decrypt with current key
+        await this.setupPin(pinA);               // new salt + key, saves verifier
+        await this.saveEntries(entries);          // re-encrypt entries with new key
+        busy = false;
+        Modal.close();
+        App.renderCurrent();
+        setTimeout(() => this.bindVault(), 50);
+      }
+    };
+
+    document.getElementById('cp-pad')?.addEventListener('click', async (e) => {
+      if (busy) return;
+      const btn = e.target.closest('[data-key]');
+      if (!btn) return;
+      const k = btn.dataset.key;
+
+      if (k === '✓') { await submit(); return; }
+
+      let current = step === 'confirm' ? pinB : pinA;
+      if (k === '⌫') current = current.slice(0, -1);
+      else if (current.length < 6) current += k;
+
+      if (step === 'confirm') pinB = current;
+      else pinA = current;
+      updateDisplay(current);
+
+      if (current.length === 6) await submit();
+    });
   },
 
   // ─── Add / Edit modals ───────────────────
