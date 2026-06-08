@@ -3,24 +3,42 @@ const App = {
   tabs: ['today', 'jobs', 'projects', 'money', 'maintenance', 'fitness', 'vault'],
 
   screens: {
-    today:       TodayScreen,
-    jobs:        JobsScreen,
-    projects:    ProjectsScreen,
-    money:       MoneyScreen,
-    maintenance: MaintenanceScreen,
-    fitness:     FitnessScreen,
-    vault:       Vault,
+    today:       typeof TodayScreen       !== 'undefined' ? TodayScreen       : null,
+    jobs:        typeof JobsScreen        !== 'undefined' ? JobsScreen        : null,
+    projects:    typeof ProjectsScreen    !== 'undefined' ? ProjectsScreen    : null,
+    money:       typeof MoneyScreen       !== 'undefined' ? MoneyScreen       : null,
+    maintenance: typeof MaintenanceScreen !== 'undefined' ? MaintenanceScreen : null,
+    fitness:     typeof FitnessScreen     !== 'undefined' ? FitnessScreen     : null,
+    vault:       typeof Vault             !== 'undefined' ? Vault             : null,
   },
 
   init() {
-    Modal.init();
-    Settings.init();
-    this.renderCurrent();
-    this.bindNav();
-    this.bindFAB();
-    this.initPWA();
-    this.updateMaintenanceBadge();
-    this.updateWatermark(this.currentTab);
+    try {
+      Modal.init();
+      Settings.init();
+      this.currentTab = 'today';
+      this.renderCurrent();
+      this.bindNav();
+      this.bindFAB();
+      this.initPWA();
+      this.updateMaintenanceBadge();
+      this.updateWatermark(this.currentTab);
+    } catch (err) {
+      console.error('App init error:', err);
+      const container = document.getElementById('screen-container');
+      if (container) {
+        container.innerHTML = `
+          <div style="padding:40px 20px;text-align:center;color:#f5c400;font-family:sans-serif;">
+            <div style="font-size:48px;margin-bottom:20px;">◈</div>
+            <div style="font-size:24px;font-weight:700;margin-bottom:12px;">THE YARD</div>
+            <div style="font-size:13px;color:#888;margin-bottom:24px;">Something went wrong loading the app.</div>
+            <button onclick="location.reload()" style="background:#f5c400;color:#000;border:none;padding:14px 28px;font-size:14px;font-weight:700;border-radius:4px;cursor:pointer;">
+              RELOAD APP
+            </button>
+            <div style="margin-top:16px;font-size:11px;color:#555;">${err.message || ''}</div>
+          </div>`;
+      }
+    }
   },
 
   renderCurrent() {

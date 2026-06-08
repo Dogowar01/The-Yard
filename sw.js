@@ -1,4 +1,4 @@
-const CACHE = 'theyard-v2';
+const CACHE = 'theyard-v3';
 const BASE = '/The-Yard';
 const ASSETS = [
   BASE + '/',
@@ -14,6 +14,7 @@ const ASSETS = [
   BASE + '/js/money.js',
   BASE + '/js/maintenance.js',
   BASE + '/js/fitness.js',
+  BASE + '/js/vault.js',
   BASE + '/js/settings.js',
   BASE + '/js/app.js',
   BASE + '/manifest.json',
@@ -38,14 +39,21 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Network-first for Google Fonts
-  if (e.request.url.includes('fonts.googleapis.com') || e.request.url.includes('fonts.gstatic.com')) {
+  const url = new URL(e.request.url);
+
+  // Always go to network for Google Fonts
+  if (url.hostname.includes('googleapis.com') || url.hostname.includes('gstatic.com')) {
     e.respondWith(
-      caches.open(CACHE).then(cache =>
-        fetch(e.request)
-          .then(res => { cache.put(e.request, res.clone()); return res; })
-          .catch(() => caches.match(e.request))
-      )
+      fetch(e.request).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // For versioned JS/CSS requests (?v=XX), strip query and match cache
+  if (url.searchParams.has('v')) {
+    const bareRequest = new Request(url.origin + url.pathname);
+    e.respondWith(
+      caches.match(bareRequest).then(cached => cached || fetch(e.request))
     );
     return;
   }
