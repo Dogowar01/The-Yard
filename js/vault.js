@@ -263,6 +263,10 @@ const Vault = {
             <button class="btn btn-secondary" style="margin-top:16px;width:200px;" id="bio-unlock-btn">
               USE FACE / FINGERPRINT
             </button>` : ''}
+          <button class="btn" id="vault-reset-btn"
+            style="margin-top:24px;font-size:11px;color:var(--text-secondary);background:none;border:none;text-decoration:underline;cursor:pointer;padding:4px 8px;">
+            Forgot PIN / Reset Vault
+          </button>
         </div>
       </div>`;
   },
@@ -497,9 +501,25 @@ const Vault = {
     if (!this.isUnlocked()) {
       this.bindPinPad('unlock');
       this.bindBioBtn();
+      this.bindResetBtn();
       return;
     }
     this.bindVault();
+  },
+
+  bindResetBtn() {
+    document.getElementById('vault-reset-btn')?.addEventListener('click', () => {
+      Modal.confirm(
+        'Reset vault? This permanently deletes ALL vault entries and your PIN. Your other app data (jobs, money, etc.) is NOT affected.',
+        () => {
+          localStorage.removeItem(this.STORE_KEY);
+          localStorage.removeItem(this.BIO_KEY);
+          this._key = null;
+          clearTimeout(this._timer);
+          App.renderCurrent();
+        }
+      );
+    });
   },
 
   // ─── Change PIN ──────────────────────────
