@@ -258,6 +258,17 @@ html, body {
   color: var(--accent-yellow);
 }
 
+.pin-key-confirm {
+  background: var(--accent-yellow);
+  border-color: var(--accent-yellow);
+  color: #000;
+  font-size: 22px;
+  font-weight: 700;
+}
+.pin-key-confirm:active {
+  opacity: 0.8;
+}
+
 .pin-key-blank {
   background: transparent;
   border-color: transparent;

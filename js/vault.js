@@ -219,6 +219,13 @@ const Vault = {
     return this._renderVault();
   },
 
+  _pinPadHTML() {
+    // Blank slot replaced with ✓ confirm button
+    return [1,2,3,4,5,6,7,8,9,'✓',0,'⌫'].map(k => `
+      <button class="pin-key ${k==='✓'?'pin-key-confirm':''}" data-key="${k}">${k}</button>
+    `).join('');
+  },
+
   _renderSetup() {
     return `
       <div class="screen" id="screen-vault" data-glyph="◩">
@@ -231,12 +238,9 @@ const Vault = {
           <div class="vault-lock-title">SET YOUR VAULT PIN</div>
           <div class="vault-lock-sub">Choose a 4–6 digit PIN. This encrypts all vault entries with AES-256. There is no recovery — don't forget it.</div>
           <div class="pin-display" id="pin-display">——————</div>
-          <div class="pin-pad" id="pin-pad">
-            ${[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map(k => `
-              <button class="pin-key ${k===''?'pin-key-blank':''}" data-key="${k}">${k}</button>
-            `).join('')}
-          </div>
-          <div class="vault-lock-sub" id="pin-step-label">Enter new PIN</div>
+          <div class="pin-error hidden" id="pin-error"></div>
+          <div class="pin-pad" id="pin-pad">${this._pinPadHTML()}</div>
+          <div class="vault-lock-sub" id="pin-step-label">Enter new PIN (4–6 digits), then press ✓</div>
         </div>
       </div>`;
   },
@@ -251,14 +255,10 @@ const Vault = {
         <div class="vault-lock-wrap">
           <div class="vault-lock-icon">◩</div>
           <div class="vault-lock-title">VAULT LOCKED</div>
-          <div class="vault-lock-sub">Enter your PIN to unlock</div>
+          <div class="vault-lock-sub">Enter your PIN then press ✓</div>
           <div class="pin-display" id="pin-display">——————</div>
           <div class="pin-error hidden" id="pin-error">Incorrect PIN — try again</div>
-          <div class="pin-pad" id="pin-pad">
-            ${[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map(k => `
-              <button class="pin-key ${k===''?'pin-key-blank':''}" data-key="${k}">${k}</button>
-            `).join('')}
-          </div>
+          <div class="pin-pad" id="pin-pad">${this._pinPadHTML()}</div>
           ${bioEnrolled ? `
             <button class="btn btn-secondary" style="margin-top:16px;width:200px;" id="bio-unlock-btn">
               USE FACE / FINGERPRINT
@@ -367,6 +367,8 @@ const Vault = {
     let pinA = '';
     let pinB = '';
     let step = mode === 'setup' ? 'first' : 'unlock';
+    let busy = false; // prevent double-submit
+
     const display = document.getElementById('pin-display');
     const label   = document.getElementById('pin-step-label');
     const error   = document.getElementById('pin-error');
@@ -376,64 +378,94 @@ const Vault = {
       if (display) display.textContent = dots.padEnd(6, '—');
     };
 
+    const showError = (msg, durationMs = 2000) => {
+      if (!error) return;
+      error.textContent = msg;
+      error.classList.remove('hidden');
+      setTimeout(() => error.classList.add('hidden'), durationMs);
+    };
+
+    const submitSetup = async () => {
+      if (busy) return;
+      const pin = step === 'first' ? pinA : pinB;
+      if (pin.length < 4) { showError('Enter at least 4 digits'); return; }
+
+      if (step === 'first') {
+        // Move to confirm step
+        busy = true;
+        await new Promise(r => setTimeout(r, 160));
+        busy = false;
+        step = 'confirm';
+        pinB = '';
+        updateDisplay('');
+        if (label) { label.textContent = 'Confirm your PIN, then press ✓'; label.style.color = ''; }
+      } else {
+        // Confirm step — check they match
+        if (pinA !== pinB) {
+          showError('PINs did not match — try again', 2000);
+          setTimeout(() => {
+            step = 'first'; pinA = ''; pinB = '';
+            updateDisplay('');
+            if (label) { label.textContent = 'Enter new PIN (4–6 digits), then press ✓'; label.style.color = ''; }
+          }, 1800);
+          return;
+        }
+        busy = true;
+        await this.setupPin(pinA);
+        busy = false;
+        App.renderCurrent();
+        setTimeout(() => this.bindVault(), 50);
+      }
+    };
+
+    const submitUnlock = async () => {
+      if (busy) return;
+      if (pinA.length < 4) { showError('Enter at least 4 digits'); return; }
+      busy = true;
+      await new Promise(r => setTimeout(r, 160));
+      const ok = await this.unlockPin(pinA);
+      busy = false;
+      if (ok) {
+        App.renderCurrent();
+        setTimeout(() => this.bindVault(), 50);
+      } else {
+        pinA = '';
+        updateDisplay('');
+        showError('Incorrect PIN — try again');
+      }
+    };
+
     document.getElementById('pin-pad')?.addEventListener('click', async (e) => {
+      if (busy) return;
       const btn = e.target.closest('[data-key]');
       if (!btn) return;
       const k = btn.dataset.key;
 
-      let current = step === 'first' ? pinA : (step === 'confirm' ? pinB : pinA);
+      // ✓ = submit
+      if (k === '✓') {
+        if (mode === 'setup') await submitSetup();
+        else await submitUnlock();
+        return;
+      }
+
+      // Work out which buffer we're editing
+      let current = (step === 'confirm') ? pinB : pinA;
 
       if (k === '⌫') {
         current = current.slice(0, -1);
-      } else if (k !== '' && current.length < 6) {
+      } else if (current.length < 6) {
         current += k;
       }
 
-      if (step === 'first')   pinA = current;
-      else if (step === 'confirm') pinB = current;
+      if (step === 'confirm') pinB = current;
       else pinA = current;
 
       updateDisplay(current);
 
-      if (mode === 'setup') {
-        if (step === 'first' && pinA.length >= 4) {
-          await new Promise(r => setTimeout(r, 180));
-          step = 'confirm';
-          pinA = pinA; // keep it
-          updateDisplay('');
-          if (label) label.textContent = 'Confirm PIN';
-        } else if (step === 'confirm' && pinB.length >= 4) {
-          if (pinA === pinB) {
-            await this.setupPin(pinA);
-            App.renderCurrent();
-            setTimeout(() => this.bindVault(), 50);
-          } else {
-            pinB = '';
-            updateDisplay('');
-            if (label) { label.textContent = 'PINs did not match — try again'; label.style.color = 'var(--accent-red)'; }
-            setTimeout(() => { if (label) { label.textContent = 'Enter new PIN'; label.style.color = ''; } step = 'first'; pinA = ''; updateDisplay(''); }, 1500);
-          }
-        }
-      } else {
-        // Unlock
-        if (pinA.length >= 4 && pinA.length <= 6) {
-          if (pinA.length === 6 || (pinA.length >= 4)) {
-            // try after slight delay for visual feedback
-            if (pinA.length >= 4) {
-              await new Promise(r => setTimeout(r, 180));
-              const ok = await this.unlockPin(pinA);
-              if (ok) {
-                App.renderCurrent();
-                setTimeout(() => this.bindVault(), 50);
-              } else {
-                pinA = '';
-                updateDisplay('');
-                if (error) error.classList.remove('hidden');
-                setTimeout(() => { if (error) error.classList.add('hidden'); }, 2000);
-              }
-            }
-          }
-        }
+      // Auto-submit at 6 digits (max length)
+      if (current.length === 6) {
+        if (mode === 'setup') await submitSetup();
+        else await submitUnlock();
       }
     });
   },

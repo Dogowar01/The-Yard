@@ -67,6 +67,12 @@ const App = {
 
   switchTab(tabId) {
     if (!this.tabs.includes(tabId)) return;
+
+    // Lock the vault whenever you leave it
+    if (this.currentTab === 'vault' && tabId !== 'vault') {
+      if (typeof Vault !== 'undefined' && Vault.isUnlocked()) Vault.lock();
+    }
+
     this.currentTab = tabId;
 
     document.querySelectorAll('.nav-tab').forEach(btn => {
