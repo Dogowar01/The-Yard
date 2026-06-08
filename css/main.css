@@ -172,6 +172,109 @@ html, body {
 }
 
 /* ============================================
+   VAULT
+   ============================================ */
+
+.vault-lock-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 24px 40px;
+  text-align: center;
+}
+
+.vault-lock-icon {
+  font-size: 64px;
+  color: var(--accent-yellow);
+  opacity: 0.8;
+  margin-bottom: 16px;
+  line-height: 1;
+}
+
+.vault-lock-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.vault-lock-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  max-width: 280px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.pin-display {
+  font-family: var(--font-display);
+  font-size: 36px;
+  letter-spacing: 0.25em;
+  color: var(--accent-yellow);
+  margin-bottom: 8px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pin-error {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-red);
+  margin-bottom: 8px;
+  min-height: 20px;
+}
+
+.pin-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+  margin-top: 8px;
+}
+
+.pin-key {
+  aspect-ratio: 1;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 28px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.1s, border-color 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pin-key:active {
+  background: var(--bg-surface);
+  border-color: var(--accent-yellow);
+  color: var(--accent-yellow);
+}
+
+.pin-key-blank {
+  background: transparent;
+  border-color: transparent;
+  cursor: default;
+  pointer-events: none;
+}
+
+.vault-secret {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.08em;
+  word-break: break-all;
+}
+
+/* ============================================
    SETTINGS BUTTON
    ============================================ */
 

@@ -1,6 +1,6 @@
 const App = {
   currentTab: 'today',
-  tabs: ['today', 'jobs', 'projects', 'money', 'maintenance', 'fitness'],
+  tabs: ['today', 'jobs', 'projects', 'money', 'maintenance', 'fitness', 'vault'],
 
   screens: {
     today:       TodayScreen,
@@ -9,6 +9,7 @@ const App = {
     money:       MoneyScreen,
     maintenance: MaintenanceScreen,
     fitness:     FitnessScreen,
+    vault:       Vault,
   },
 
   init() {
@@ -38,6 +39,7 @@ const App = {
     money:       '◉',
     maintenance: '◎',
     fitness:     '◐',
+    vault:       '◩',
   },
 
   updateWatermark(tabId) {
@@ -74,6 +76,7 @@ const App = {
     if (tab === 'projects')    return ProjectsScreen.openAddModal();
     if (tab === 'maintenance') return MaintenanceScreen.openAddModal();
     if (tab === 'fitness')     return FitnessScreen.openAddModal();
+    if (tab === 'vault')       return Vault.isUnlocked() ? Vault.openAddModal() : null;
     if (tab === 'money') {
       const view = MoneyScreen.currentView;
       if (view === 'income')   return MoneyScreen.openAddIncomeModal();

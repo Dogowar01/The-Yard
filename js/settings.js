@@ -48,6 +48,59 @@ const Settings = {
     localStorage.setItem('theyard_theme', themeKey);
   },
 
+  async loadBioControls() {
+    const el = document.getElementById('bio-controls');
+    if (!el) return;
+
+    const available  = await Vault.bioAvailable();
+    const vaultSetup = Vault.isSetup();
+    const enrolled   = Vault.isBioEnrolled();
+    const unlocked   = Vault.isUnlocked();
+
+    if (!vaultSetup) {
+      el.innerHTML = `<p style="font-size:13px;color:var(--text-secondary);">Set up your vault PIN first.</p>`;
+      return;
+    }
+    if (!available) {
+      el.innerHTML = `<p style="font-size:13px;color:var(--text-secondary);">Biometrics not available on this device or browser.</p>`;
+      return;
+    }
+    if (enrolled) {
+      el.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:13px;color:var(--accent-green);font-weight:700;">✓ ENROLLED</span>
+          <button class="btn btn-danger btn-sm" id="bio-remove-btn">REMOVE</button>
+        </div>`;
+      el.querySelector('#bio-remove-btn')?.addEventListener('click', async () => {
+        await Vault.removeBio();
+        this.loadBioControls();
+      });
+    } else {
+      el.innerHTML = `
+        <div>
+          ${!unlocked ? `<p style="font-size:12px;color:var(--accent-orange);margin-bottom:10px;">Unlock the vault first to enrol biometrics.</p>` : ''}
+          <button class="btn btn-secondary" id="bio-enrol-btn" ${!unlocked ? 'disabled style="opacity:0.5;"' : ''}>
+            ENROL FACE ID / FINGERPRINT
+          </button>
+          <div id="bio-status" style="font-size:12px;margin-top:8px;min-height:18px;"></div>
+        </div>`;
+      el.querySelector('#bio-enrol-btn')?.addEventListener('click', async () => {
+        const statusEl = document.getElementById('bio-status');
+        if (statusEl) statusEl.textContent = 'Follow the prompt on your device...';
+        // Need the current PIN — ask for it
+        const pin = prompt('Enter your current vault PIN to enrol biometrics:');
+        if (!pin) return;
+        const ok = await Vault.enrollBio(pin);
+        if (ok) {
+          if (statusEl) { statusEl.textContent = '✓ Enrolled successfully.'; statusEl.style.color = 'var(--accent-green)'; }
+          setTimeout(() => this.loadBioControls(), 1000);
+        } else {
+          if (statusEl) { statusEl.textContent = '✕ Enrolment failed or cancelled.'; statusEl.style.color = 'var(--accent-red)'; }
+        }
+      });
+    }
+  },
+
   exportData() {
     const data = Storage.get();
     const theme = localStorage.getItem('theyard_theme') || 'yellow';
@@ -197,6 +250,17 @@ const Settings = {
 
       <div class="divider" style="margin:20px 0;"></div>
 
+      <div class="section-label" style="padding:0 0 12px;">VAULT BIOMETRICS</div>
+      <div id="bio-section">
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;line-height:1.6;">
+          Use Face ID or fingerprint to unlock the vault instead of typing your PIN.
+          Requires vault PIN to be set first.
+        </p>
+        <div id="bio-controls">loading...</div>
+      </div>
+
+      <div class="divider" style="margin:20px 0;"></div>
+
       <div class="section-label" style="padding:0 0 12px;">BACKUP & RESTORE</div>
       <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;">
         Export saves everything — jobs, money, assets, projects — as a file on your device. Import restores it on any phone or browser.
@@ -242,6 +306,9 @@ const Settings = {
       const custom = Modal.content.querySelector('#fifo-custom');
       if (custom) custom.style.display = e.target.value === 'CUSTOM' ? '' : 'none';
     });
+
+    // Bio controls — async load
+    this.loadBioControls();
 
     // Export
     Modal.content.querySelector('#s-export')?.addEventListener('click', () => {
