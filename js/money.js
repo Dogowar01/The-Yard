@@ -182,6 +182,13 @@ const MoneyScreen = {
     const addBillBtn = document.getElementById('add-bill-btn');
     if (addBillBtn) addBillBtn.addEventListener('click', () => this.openAddBillModal());
 
+    document.querySelectorAll('[data-bill-paid]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.markBillPaid(btn.dataset.billPaid);
+      });
+    });
+
     document.querySelectorAll('[data-bill-id]').forEach(card => {
       card.addEventListener('click', () => {
         const data = Storage.get();
@@ -398,15 +405,58 @@ const MoneyScreen = {
                   <div class="card-title">${Utils.escape(b.name)}</div>
                   <div class="card-value ${overdue ? 'text-red' : soon ? 'text-orange' : ''}">${Utils.formatCurrency(b.amount)}</div>
                 </div>
-                <div class="card-meta">
-                  <span class="text-muted">${b.repeat}</span>
-                  ${b.nextDue ? `<span class="${overdue ? 'text-red' : soon ? 'text-orange' : ''}">
-                    ${overdue ? 'OVERDUE' : d === 0 ? 'DUE TODAY' : d === 1 ? 'DUE TOMORROW' : 'DUE ' + Utils.formatDate(b.nextDue)}
-                  </span>` : ''}
+                <div class="flex-between">
+                  <div class="card-meta">
+                    <span class="text-muted">${b.repeat}</span>
+                    ${b.nextDue ? `<span class="${overdue ? 'text-red' : soon ? 'text-orange' : ''}">
+                      ${overdue ? 'OVERDUE' : d === 0 ? 'DUE TODAY' : d === 1 ? 'DUE TOMORROW' : 'DUE ' + Utils.formatDate(b.nextDue)}
+                    </span>` : ''}
+                  </div>
+                  ${(overdue || soon) ? `<button class="btn btn-primary btn-sm" data-bill-paid="${b.id}">PAID ✓</button>` : ''}
                 </div>
               </div>`;
           }).join('')
       }`;
+  },
+
+  // Advance an ISO date by one repeat interval
+  advanceDate(iso, repeat) {
+    const d = new Date(iso + 'T00:00:00');
+    if (repeat === 'WEEKLY')      d.setDate(d.getDate() + 7);
+    else if (repeat === 'FORTNIGHTLY') d.setDate(d.getDate() + 14);
+    else if (repeat === 'MONTHLY')     d.setMonth(d.getMonth() + 1);
+    else if (repeat === 'QUARTERLY')   d.setMonth(d.getMonth() + 3);
+    else if (repeat === 'YEARLY')      d.setFullYear(d.getFullYear() + 1);
+    else return null; // ONE-OFF
+    return Utils.toISO(d);
+  },
+
+  markBillPaid(id) {
+    const data = Storage.get();
+    const bill = (data.money.bills || []).find(b => b.id === id);
+    if (!bill) return;
+
+    Storage.update(d => {
+      // Log it as an expense so the money picture stays honest
+      if (Number(bill.amount) > 0) {
+        d.money.expenses.push({
+          id: Utils.id(),
+          amount: Number(bill.amount),
+          category: 'OTHER',
+          note: bill.name,
+          date: Utils.today(),
+        });
+      }
+      const next = this.advanceDate(bill.nextDue, bill.repeat);
+      if (next) {
+        const idx = d.money.bills.findIndex(b => b.id === id);
+        if (idx >= 0) d.money.bills[idx].nextDue = next;
+      } else {
+        // One-off bill — paid means gone
+        d.money.bills = d.money.bills.filter(b => b.id !== id);
+      }
+    });
+    App.renderCurrent();
   },
 
   billFormHTML(bill = {}) {
@@ -486,12 +536,15 @@ const MoneyScreen = {
       current: Number(document.getElementById('f-current').value) || 0,
       targetDate: document.getElementById('f-date').value,
     };
+    if (!existingId && (Storage.get().money.goals || []).length >= 5) {
+      alert('Maximum 5 goals — finish one off first.');
+      return;
+    }
     Storage.update(d => {
       if (existingId) {
         const idx = d.money.goals.findIndex(g => g.id === existingId);
         if (idx >= 0) d.money.goals[idx] = goal;
       } else {
-        if (d.money.goals.length >= 5) { alert('Maximum 5 goals.'); return; }
         d.money.goals.push(goal);
       }
     });

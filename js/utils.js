@@ -14,8 +14,17 @@ const Utils = {
     return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
   },
 
+  // Local-time ISO date — toISOString() is UTC and gives the wrong
+  // day for most of the Australian evening
+  toISO(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  },
+
   today() {
-    return new Date().toISOString().slice(0, 10);
+    return this.toISO(new Date());
   },
 
   weekNumber(date) {
@@ -29,7 +38,7 @@ const Utils = {
     const day = d.getDay();
     const diff = d.getDate() - day + (day === 0 ? -6 : 1);
     const monday = new Date(d.setDate(diff));
-    return monday.toISOString().slice(0, 10);
+    return this.toISO(monday);
   },
 
   daysUntil(isoDate) {

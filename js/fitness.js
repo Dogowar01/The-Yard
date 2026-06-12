@@ -16,9 +16,9 @@ const FitnessScreen = {
     const todayStr = Utils.today();
     const weekDays = [];
     for (let i = 0; i < 7; i++) {
-      const d = new Date(weekStart);
+      const d = new Date(weekStart + 'T00:00:00');
       d.setDate(d.getDate() + i);
-      weekDays.push(d.toISOString().slice(0, 10));
+      weekDays.push(Utils.toISO(d));
     }
 
     const weekStripHTML = `

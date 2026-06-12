@@ -17,11 +17,13 @@ const TodayScreen = {
     const pct = target > 0 ? Utils.clamp((weekIncome / target) * 100, 0, 100) : 0;
     const barColor = pct >= 100 ? 'green' : pct >= 60 ? 'yellow' : 'orange';
 
-    // Jobs due today
-    const todayStr = Utils.today();
-    const jobsDue = (data.jobs || []).filter(j =>
-      j.deadline === todayStr && j.status !== 'PAID' && j.status !== 'CANCELLED'
+    // Jobs overdue or due within 7 days
+    const openJobs = (data.jobs || []).filter(j =>
+      j.deadline && j.status !== 'PAID' && j.status !== 'CANCELLED'
     );
+    const jobsDue = openJobs
+      .filter(j => { const d = Utils.daysUntil(j.deadline); return d !== null && d <= 7; })
+      .sort((a, b) => a.deadline.localeCompare(b.deadline));
 
     // Maintenance alerts — detailed
     const overdueAssets = (data.assets || []).filter(a => MaintenanceScreen.computeStatus(a) === 'OVERDUE');
@@ -75,19 +77,23 @@ const TodayScreen = {
     let jobsDueHTML = '';
     if (jobsDue.length > 0) {
       jobsDueHTML = `
-        <div class="section-label">JOBS DUE TODAY</div>
-        ${jobsDue.map(j => `
+        <div class="section-label">JOBS THIS WEEK</div>
+        ${jobsDue.map(j => {
+          const d = Utils.daysUntil(j.deadline);
+          const when = d < 0 ? `OVERDUE ${Math.abs(d)}d` : d === 0 ? 'DUE TODAY' : d === 1 ? 'TOMORROW' : `IN ${d} DAYS`;
+          return `
           <div class="card" data-job-id="${j.id}">
             <div class="flex-between">
               <div class="card-title">${Utils.escape(j.name)}</div>
-              <span class="status status-${j.status.toLowerCase()}">${j.status}</span>
+              <span class="${d < 0 ? 'text-red' : d <= 1 ? 'text-orange' : 'text-muted'}" style="font-size:12px;font-weight:700;">${when}</span>
             </div>
             <div class="card-meta">
               <span>${Utils.escape(j.client || '')}</span>
               ${j.value ? `<span>${Utils.formatCurrency(j.value)}</span>` : ''}
+              <span class="status status-${j.status.toLowerCase()}" style="font-size:9px;">${j.status}</span>
             </div>
-          </div>
-        `).join('')}`;
+          </div>`;
+        }).join('')}`;
     }
 
     return `

@@ -99,6 +99,7 @@ const ProjectsScreen = {
   openAddModal() {
     Modal.open('ADD PROJECT', this.formHTML());
     Modal.content.querySelector('[data-save]').addEventListener('click', () => this.saveFromModal(null));
+    this.bindMilestones({});
   },
 
   openEditModal(project) {
@@ -198,12 +199,6 @@ const ProjectsScreen = {
     document.getElementById('add-milestone').addEventListener('click', () => {
       if (list.children.length >= 10) return;
       const i = list.children.length;
-      const li = document.createElement('li');
-      li.innerHTML = this.milestoneItemHTML({ text: '', done: false }, i);
-      li.className = 'milestone-item';
-      li.dataset.mi = i;
-      list.appendChild(li.firstElementChild ? li.firstElementChild : li);
-      // Actually append the li
       list.insertAdjacentHTML('beforeend', this.milestoneItemHTML({ text: '', done: false }, i));
       list.lastElementChild.querySelector('input').focus();
     });

@@ -111,7 +111,8 @@ html, body {
 
 #bottom-nav {
   display: flex;
-  height: var(--nav-height);
+  height: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--bg-surface);
   border-top: 2px solid var(--border);
   position: relative;
@@ -567,6 +568,22 @@ html, body {
   z-index: 5;
 }
 
+/* Hazard-stripe accent along the bottom of every screen header */
+.screen-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 4px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--accent-yellow) 0 8px,
+    transparent 8px 16px
+  );
+  opacity: 0.55;
+}
+
 .screen-title {
   font-family: var(--font-display);
   font-size: 32px;
@@ -613,7 +630,10 @@ html, body {
   position: relative;
 }
 
-.card:active { background: var(--bg-elevated); }
+.card:active {
+  background: var(--bg-elevated);
+  box-shadow: inset 3px 0 0 var(--accent-yellow);
+}
 
 .card-title {
   font-family: var(--font-body);

@@ -23,14 +23,44 @@ const MaintenanceScreen = {
           <div class="card-title">${Utils.escape(asset.name)}</div>
           <span class="status ${statusClass}">${status}</span>
         </div>
-        <div class="card-meta">
-          <span class="text-muted">${asset.type}</span>
-          ${asset.lastServiceDate ? `<span>LAST: ${Utils.formatDate(asset.lastServiceDate)}</span>` : ''}
-          ${asset.nextServiceDate ? `<span class="${status !== 'OK' ? (status === 'OVERDUE' ? 'text-red' : 'text-orange') : ''}">${dueStr}</span>` : ''}
+        <div class="flex-between">
+          <div class="card-meta">
+            <span class="text-muted">${asset.type}</span>
+            ${asset.lastServiceDate ? `<span>LAST: ${Utils.formatDate(asset.lastServiceDate)}</span>` : ''}
+            ${asset.nextServiceDate ? `<span class="${status !== 'OK' ? (status === 'OVERDUE' ? 'text-red' : 'text-orange') : ''}">${dueStr}</span>` : ''}
+          </div>
+          ${status !== 'OK' ? `<button class="btn btn-primary btn-sm" data-serviced="${asset.id}">SERVICED ✓</button>` : ''}
         </div>
         ${asset.notes ? `<div class="card-meta mt-8" style="font-style:italic;">${Utils.escape(asset.notes.slice(0,80))}</div>` : ''}
       </div>
     `;
+  },
+
+  markServiced(id) {
+    const data = Storage.get();
+    const asset = (data.assets || []).find(a => a.id === id);
+    if (!asset) return;
+
+    const months = Number(asset.intervalMonths) || 0;
+    Storage.update(d => {
+      const idx = d.assets.findIndex(a => a.id === id);
+      if (idx < 0) return;
+      d.assets[idx].lastServiceDate = Utils.today();
+      if (months > 0) {
+        const next = new Date();
+        next.setMonth(next.getMonth() + months);
+        d.assets[idx].nextServiceDate = Utils.toISO(next);
+      } else {
+        d.assets[idx].nextServiceDate = '';
+      }
+    });
+    App.renderCurrent();
+    this.updateBadge(Storage.get());
+    // No interval set — they'll want to pick the next date themselves
+    if (months === 0) {
+      const updated = Storage.get().assets.find(a => a.id === id);
+      if (updated) this.openEditModal(updated);
+    }
   },
 
   updateBadge(data) {
@@ -90,6 +120,13 @@ const MaintenanceScreen = {
   },
 
   bind() {
+    document.querySelectorAll('[data-serviced]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.markServiced(btn.dataset.serviced);
+      });
+    });
+
     document.querySelectorAll('#assets-list .card').forEach(card => {
       card.addEventListener('click', () => {
         const data = Storage.get();
@@ -140,10 +177,17 @@ const MaintenanceScreen = {
           <input class="form-input" id="f-next" type="date" value="${asset.nextServiceDate||''}">
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">SERVICE INTERVAL</label>
-        <input class="form-input" id="f-interval" type="text" maxlength="40"
-          value="${Utils.escape(asset.serviceInterval||'')}" placeholder="e.g. Every 6 months / 10,000km">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">REPEATS EVERY (MONTHS)</label>
+          <input class="form-input" id="f-interval-months" type="number" min="0" max="60"
+            value="${asset.intervalMonths||''}" placeholder="e.g. 6">
+        </div>
+        <div class="form-group">
+          <label class="form-label">INTERVAL NOTE</label>
+          <input class="form-input" id="f-interval" type="text" maxlength="40"
+            value="${Utils.escape(asset.serviceInterval||'')}" placeholder="e.g. or 10,000km">
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">NOTES / SERVICE HISTORY</label>
@@ -167,6 +211,7 @@ const MaintenanceScreen = {
       type:            document.getElementById('f-type').value,
       lastServiceDate: document.getElementById('f-last').value,
       nextServiceDate: document.getElementById('f-next').value,
+      intervalMonths:  Number(document.getElementById('f-interval-months').value) || 0,
       serviceInterval: document.getElementById('f-interval').value.trim(),
       notes:           document.getElementById('f-notes').value.trim(),
     };

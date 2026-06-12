@@ -125,6 +125,10 @@ const JobsScreen = {
   },
 
   bindForm(existingId, job = {}) {
+    // Render existing costs/trips into the form so editing doesn't wipe them
+    (job.costs || []).forEach(c => this.addCostRow(c));
+    (job.trips || []).forEach(t => this.addTripRow(t));
+
     Modal.content.querySelector('[data-save]')?.addEventListener('click', () => this.saveFromModal(existingId));
     Modal.content.querySelector('[data-delete]')?.addEventListener('click', () => {
       Modal.confirm(`Delete job "${job.name}"?`, () => {
@@ -226,16 +230,12 @@ const JobsScreen = {
       </div>
 
       <div class="section-label" style="padding:16px 0 8px;">JOB COSTS</div>
-      <div id="costs-list">
-        ${costs.map(c => '').join('')}
-      </div>
+      <div id="costs-list"></div>
       <button type="button" class="btn btn-secondary btn-sm" id="add-cost-btn">+ ADD COST</button>
 
       <div class="section-label" style="padding:16px 0 8px;">MILEAGE / KM LOG</div>
       <div class="card-meta text-muted" style="font-size:11px;margin-bottom:8px;">ATO logbook — start &amp; end odometer per trip</div>
-      <div id="trips-list">
-        ${trips.map(t => '').join('')}
-      </div>
+      <div id="trips-list"></div>
       <button type="button" class="btn btn-secondary btn-sm" id="add-trip-btn">+ ADD TRIP</button>
 
       <div class="form-actions" style="margin-top:24px;">
@@ -280,6 +280,10 @@ const JobsScreen = {
       trips:     this.getTrips(),
     };
 
+    // Detect QUOTED/ACTIVE/INVOICED → PAID transition
+    const prev = existingId ? Storage.get().jobs.find(j => j.id === existingId) : null;
+    const justPaid = job.status === 'PAID' && (!prev || prev.status !== 'PAID') && job.value > 0;
+
     Storage.update(d => {
       if (existingId) {
         const idx = d.jobs.findIndex(j => j.id === existingId);
@@ -289,6 +293,17 @@ const JobsScreen = {
       }
     });
     Modal.close();
+
+    if (justPaid && confirm(`Log ${Utils.formatCurrency(job.value)} from "${job.name}" as income?`)) {
+      Storage.update(d => {
+        d.money.income.push({
+          id: Utils.id(),
+          amount: job.value,
+          source: job.name + (job.client ? ' — ' + job.client : ''),
+          date: Utils.today(),
+        });
+      });
+    }
     App.renderCurrent();
   }
 };
