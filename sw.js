@@ -1,4 +1,4 @@
-const CACHE = 'theyard-v3';
+const CACHE = 'theyard-v4';
 const BASE = '/The-Yard';
 const ASSETS = [
   BASE + '/',
